@@ -79,9 +79,47 @@ bash scripts/benchmark/benchmark_loda_evalmuse10k_infer.sh
 
 ### Step3. Structure Distortion Detection
 
-```bash
-# we use 8xA100 40G for training
-python -m torch.distributed.launch --nproc_per_node=8 --master_port 12345 train_university.py
+1. Enter the specified directory
+
+```
+cd Co-DETR
+
+```
+
+2. Prepare environment
+
+```
+# Please follow the README to prepare environment
+```
+
+3. Data Preparation
+
+You need to place the data under the `./data` directory as follows.
+
+```
+├── data
+|    ├── evalmuse10k
+|    |    ├── train
+|    |    ├── test
+|    |    ├── ...
+```
+
+4. Training 
+
+```
+# We use 8xA100 for training (takes about 10h)
+bash tools/dist_train.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py 8 work_dirs/co_dino_5scale_vit_large_evalmuse_instance
+
+```
+
+5. Inference
+
+```
+# The pretrained model is located at 
+# runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir
+# And the results will dump into ./loda_results.npy
+bash tools/dist_test.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py work_dirs/co_dino_5scale_vit_large_evalmuse_instance/epoch_10.pth 8 --format-only --eval-options "jsonfile_prefix=co_dino_5scale_vit_large_evalmuse_instance"
+
 ```
 
 ### Step4. 
