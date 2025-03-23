@@ -96,6 +96,8 @@ cd Co-DETR
 ```
 # Please follow the README to prepare environment
 # https://github.com/Sense-X/Co-DETR/blob/main/README.md
+
+# We strongly recommend creating a new Conda environment for Co-DETR
 ```
 
 3. Data Preparation
@@ -127,7 +129,6 @@ You need to place the data under the `./data` directory as follows.
 # 
 # We use 8xA100 for training
 bash tools/dist_train.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py 8 work_dirs/co_dino_5scale_vit_large_evalmuse_instance
-
 ```
 
 5. Inference
