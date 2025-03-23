@@ -3,9 +3,11 @@
 
 ## Team
 
-Team name: wangzhiyu918
+Team name: HNU-VPAI
 
-Concat: wangzhiyu.wzy1@gmail.com
+Colab Account: wangzhiyu918
+
+Concat Email: wangzhiyu.wzy1@gmail.com
 
 ## Introduction
 
@@ -64,16 +66,20 @@ You need to place the data under the `./data` directory as follows.
 4. Training 
 
 ```
-# We use 8xA100 for training (takes about 1h)
+# We use 8xA100 for training
 bash scripts/benchmark/benchmark_loda_evalmuse10k.sh
 ```
 
 5. Inference
 
 ```
-# The pretrained model is located at 
+# Download the pretrained model from:
+# https://huggingface.co/datasets/wangzhiyu918/results/blob/main/loda_evalmuse10k_train_split0_1120.pt
+#
+# Place the model in the following directory:
 # runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir
-# And the results will dump into ./loda_results.npy
+#
+# Then, execute the following command to generate results, which will be saved to ./loda_results.npy.
 bash scripts/benchmark/benchmark_loda_evalmuse10k_infer.sh
 ```
 
