@@ -89,31 +89,43 @@ bash scripts/benchmark/benchmark_loda_evalmuse10k_infer.sh
 
 ```
 cd Co-DETR
-
 ```
 
 2. Prepare environment
 
 ```
 # Please follow the README to prepare environment
+# https://github.com/Sense-X/Co-DETR/blob/main/README.md
 ```
 
 3. Data Preparation
 
 You need to place the data under the `./data` directory as follows.
 
+
 ```
+# evalmuse_trainval10000_coco_instances_v3.json and evalmuse_test999_coco_instances.json
+# can be downloaded from: https://huggingface.co/datasets/wangzhiyu918/results/
+
 ├── data
 |    ├── evalmuse10k
 |    |    ├── train
+|    |    |   ├──images
+|    |    |   |--evalmuse_trainval10000_coco_instances_v3.json
 |    |    ├── test
-|    |    ├── ...
+|    |    |   ├──images
+|    |    |   |--evalmuse_test999_coco_instances.json
 ```
 
 4. Training 
 
 ```
-# We use 8xA100 for training (takes about 10h)
+# Download CO-DETR COCO pretrained weights from:
+# https://huggingface.co/zongzhuofan/co-detr-vit-large-coco-instance/blob/main/pytorch_model.pth
+# 
+# Place the model in the following directory: ./pretrained_weights/
+# 
+# We use 8xA100 for training
 bash tools/dist_train.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py 8 work_dirs/co_dino_5scale_vit_large_evalmuse_instance
 
 ```
@@ -121,18 +133,25 @@ bash tools/dist_train.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_e
 5. Inference
 
 ```
-# The pretrained model is located at 
-# runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir
-# And the results will dump into ./loda_results.npy
-bash tools/dist_test.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py work_dirs/co_dino_5scale_vit_large_evalmuse_instance/epoch_10.pth 8 --format-only --eval-options "jsonfile_prefix=co_dino_5scale_vit_large_evalmuse_instance"
+# Download the pretrained model from:
+# https://huggingface.co/datasets/wangzhiyu918/results/blob/main/codetr-evalmuse.pth
+#
+# Place the model in the following directory: ./pretrained_weights/
+#
+# Then, execute the following command to generate results, which will be saved to:
+# ./co_dino_5scale_vit_large_evalmuse_instance.segm.json
 
+bash tools/dist_test.sh projects/configs/co_dino_vit/co_dino_5scale_vit_large_evalmuse_instance.py pretrained_weights/codetr-evalmuse.pth 8 --format-only --eval-options "jsonfile_prefix=co_dino_5scale_vit_large_evalmuse_instance"
+
+# Convert instance into mask
+# The results will be saved to: ./co_dino_5scale_vit_large_evalmuse_instance
+python convert_instance_to_mask.py
 ```
 
-### Step4. 
+### Step4. Prepare Submission File
 
 ```bash
-# download test data (i.e., query_drone_160k_wx_24 and gallery_satellite_160k) to the ./data
-# change the checkpoint path in eval_mm_2024.py (line54)
-python eval_mm_2024.py
+# The submission file will be saved to: ./results.zip
+python generate_submission_file.py
 ```
 

@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from pycocotools import mask as mask_utils
 import os
 
-# 1. 读取 gt.json，获取图像路径和类别映射
 def load_gt(gt_path):
     with open(gt_path, "r") as f:
         gt_data = json.load(f)
@@ -19,14 +18,12 @@ def load_gt(gt_path):
     
     return image_id_to_path, category_map
 
-# 2. 读取 results.segm.json 并解析 RLE 掩码
 def load_results(results_path):
     with open(results_path, "r") as f:
         results = json.load(f)
     return results
 
-# 3. 绘制分割掩码、边界框、置信度
-def visualize_results(image_path, annotations, output_dir):
+def convert_results(image_path, annotations, output_dir):
     # 读取原始图像
     image = cv2.imread(image_path)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -54,7 +51,6 @@ def visualize_results(image_path, annotations, output_dir):
         os.path.join(output_dir, os.path.basename(image_path)[:-4] + ".png")
     )
 
-# 4. 主函数，加载数据并进行可视化
 def main(gt_json, results_json, image_dir, output_dir):
     # 读取数据
     image_id_to_path, category_map = load_gt(gt_json)
@@ -77,7 +73,7 @@ def main(gt_json, results_json, image_dir, output_dir):
     for image_id, annotations in image_to_annotations.items():
         if image_id in image_id_to_path:
             image_path = os.path.join(image_dir, image_id_to_path[image_id])
-            visualize_results(image_path, annotations, output_dir)
+            convert_results(image_path, annotations, output_dir)
         else:
             print(f"Warning: Image ID {image_id} not found in GT.")
 
@@ -86,6 +82,6 @@ if __name__ == "__main__":
     gt_json = "./data/evalmuse/test/evalmuse_test999_coco_instances.json"
     image_dir = "./data/evalmuse/test/images/"
     
-    results_json = f"./co_dino_5scale_lsj_vit_large_evalmuse_instance.segm.json"
-    output_dir = f"./co_dino_5scale_lsj_vit_large_evalmuse_instance"
+    results_json = f"./co_dino_5scale_vit_large_evalmuse_instance.segm.json"
+    output_dir = f"./co_dino_5scale_vit_large_evalmuse_instance"
     main(gt_json, results_json, image_dir, output_dir)
