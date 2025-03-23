@@ -102,6 +102,6 @@ def test_model(cfg, model, test_loader, writer):
             min_score = np.min(pred_scores)
             max_score = np.max(pred_scores)
             pred_scores = 1 + (pred_scores - min_score) * (5 - 1) / (max_score - min_score)
-            save_path = "./results/loda_results.npy"
+            save_path = "./loda_results.npy"
             np.save(save_path, pred_scores)
-            print(save_path)
+            print("Save results into: ", save_path)

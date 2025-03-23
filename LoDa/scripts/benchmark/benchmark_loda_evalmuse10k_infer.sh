@@ -1,5 +1,6 @@
 #!/bin/bash
 
+split_idx=0
 CUDA_VISIBLE_DEVICES=0 python src/eval.py \
     job=eval \
     run_group=loda_evalmuse10k_eval \
