@@ -1,0 +1,299 @@
+[2025-03-22 03:45:34,225][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 2
+[2025-03-22 03:45:34,241][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 4
+[2025-03-22 03:45:34,253][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 3
+[2025-03-22 03:45:34,258][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 6
+[2025-03-22 03:45:34,258][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 7
+[2025-03-22 03:45:35,098][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 5
+[2025-03-22 03:45:35,103][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 1
+[2025-03-22 03:45:35,126][torch.distributed.distributed_c10d][INFO] - Added key: store_based_barrier_key:1 to store for rank: 0
+[2025-03-22 03:45:35,126][torch.distributed.distributed_c10d][INFO] - Rank 4: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,126][torch.distributed.distributed_c10d][INFO] - Rank 0: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,128][torch.distributed.distributed_c10d][INFO] - Rank 3: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,129][torch.distributed.distributed_c10d][INFO] - Rank 5: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,130][torch.distributed.distributed_c10d][INFO] - Rank 2: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,132][torch.distributed.distributed_c10d][INFO] - Rank 6: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,132][torch.distributed.distributed_c10d][INFO] - Rank 7: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,134][torch.distributed.distributed_c10d][INFO] - Rank 1: Completed store-based barrier for key:store_based_barrier_key:1 with 8 nodes.
+[2025-03-22 03:45:35,295][trainer.py][INFO] - Config:
+project_name: loda
+name: loda_evalmuse10k_train_split${split_index}
+run_group: loda_benchmark_evalmuse10k
+working_dir: runs/${run_group}/${name}
+random_seed: 3407
+train_test_num: 1
+num_epoch: 20
+split_index: 0
+train:
+  patch_num: 1
+  batch_size: 8
+  num_workers: 10
+test:
+  patch_num: 1
+  batch_size: 8
+  num_workers: 10
+dist:
+  device: 0
+  mode: nccl
+  master_addr: 127.0.0.1
+  master_port: '23456'
+  timeout: null
+  gpus: 8
+  device_num: 8
+model:
+  model_name: loda
+  basic_model_name: vit_large_patch14_reg4_dinov2.lvd142m
+  basic_model_pretrained: true
+  hyper_vit:
+    dropout_rate: 0.1
+  vit_param:
+    img_size: 518
+    patch_size: 16
+    embed_dim: 768
+    depth: 12
+    qkv_bias: true
+    num_heads: 12
+    num_classes: 1000
+  learner_param:
+    num_classes: 1
+    embed_dim: ${model.vit_param.embed_dim}
+    feature_channels:
+    - 256
+    - 512
+    - 1024
+    - 2048
+    cnn_feature_num: 4
+    interaction_block_num: ${model.vit_param.depth}
+    latent_dim: 64
+    grid_size: 7
+    cross_attn_num_heads: 4
+  feature_model:
+    name: resnet50
+    load_timm_model: true
+    out_indices:
+    - 1
+    - 2
+    - 3
+    - 4
+data:
+  name: evalmuse10k
+  root: data/evalmuse10k
+  meta_info_file: data/meta_info/meta_info_EvalMuse10kDataset.csv
+  train_test_split_file: data/train_split_info/evalmuse10k_91_seed3407.pkl
+  divide_dataset_per_gpu: true
+  data_num: 10000
+  train_data_num: 9000
+  test_data_num: 1000
+  image_size: 518
+  patch_size: 518
+optimizer:
+  name: adamW
+  param:
+    lr: 0.0003
+    weight_decay: 0.01
+scheduler:
+  name: CosineAnnealingLR
+  param:
+    T_max: ${eval:'${data.train_data_num} * ${train.patch_num} * ${num_epoch} // (${train.batch_size}
+      * ${dist.device_num})'}
+    eta_min: 0
+loss:
+  fn:
+  - - plcc_loss
+    - 1
+log:
+  chkpt_dir: ${working_dir}/chkpt_dir
+  summary_interval: 1
+  net_chkpt_interval: 1
+  train_chkpt_interval: 1
+  use_wandb: false
+  wandb_save_model: false
+  wandb_init_conf:
+    project: ${project_name}
+    name: ${name}
+    entity: ${oc.env:WANDB_INIT_ENTITY}
+    mode: offline
+    save_code: true
+  use_tensorboard: false
+load:
+  resume_state_path: null
+  network_chkpt_path: null
+  wandb_load_path: null
+  strict_load: false
+job_logging_cfg:
+  version: 1
+  formatters:
+    simple:
+      format: '%(message)s'
+    detailed:
+      format: '[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: simple
+      stream: ext://sys.stdout
+    file:
+      class: logging.FileHandler
+      formatter: detailed
+      filename: logs/trainer.log
+  root:
+    level: INFO
+    handlers:
+    - console
+    - file
+  disable_existing_loggers: false
+hydra_output_dir: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/outputs/loda_evalmuse10k_train_split0-2025-03-22_03-45-31
+
+[2025-03-22 03:45:35,295][trainer.py][INFO] - Set up train process
+[2025-03-22 03:45:35,295][trainer.py][INFO] - Making train dataloader...
+[2025-03-22 03:45:36,542][trainer.py][INFO] - Making test dataloader...
+[2025-03-22 03:45:54,580][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:54,787][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:54,878][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,166][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,209][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:55,227][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,249][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,257][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,324][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/vit_large_patch14_reg4_dinov2.lvd142m)
+[2025-03-22 03:45:55,567][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:55,742][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:55,811][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:55,994][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:56,188][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:56,835][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:57,260][timm.models._hub][INFO] - [timm/vit_large_patch14_reg4_dinov2.lvd142m] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:59,404][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:45:59,631][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:59,647][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:45:59,720][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:45:59,739][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:45:59,875][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:45:59,934][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:45:59,938][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:46:00,095][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:46:00,103][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:46:00,125][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:46:00,154][timm.models._builder][INFO] - Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+[2025-03-22 03:46:00,206][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,268][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:00,293][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,320][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,353][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:00,353][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,385][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:00,386][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,411][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:00,420][timm.models._hub][INFO] - [timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+[2025-03-22 03:46:00,539][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:00,559][timm.models._builder][INFO] - Missing keys (fc.weight, fc.bias) discovered while loading pretrained weights. This is expected if model is being adapted.
+[2025-03-22 03:46:03,068][trainer.py][INFO] - Starting new training run.
+[2025-03-22 03:46:38,095][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,095][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,095][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,095][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,097][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,097][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,097][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:46:38,097][torch.nn.parallel.distributed][INFO] - Reducer buckets have been rebuilt in this iteration.
+[2025-03-22 03:48:47,974][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_140.pt
+[2025-03-22 03:48:48,459][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_140.state
+[2025-03-22 03:49:27,657][test_model.py][INFO] - Test PLCC 0.6604 at (epoch: 1 / step: 140)
+[2025-03-22 03:49:27,658][test_model.py][INFO] - Test SRCC 0.6450 at (epoch: 1 / step: 140)
+[2025-03-22 03:49:27,658][test_model.py][INFO] - Test RMSE 2.9327 at (epoch: 1 / step: 140)
+[2025-03-22 03:49:27,658][test_model.py][INFO] - Test Loss 0.1674 at (epoch: 1 / step: 140)
+[2025-03-22 03:52:11,305][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_280.pt
+[2025-03-22 03:52:11,724][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_280.state
+[2025-03-22 03:52:50,886][test_model.py][INFO] - Test PLCC 0.7105 at (epoch: 2 / step: 280)
+[2025-03-22 03:52:50,887][test_model.py][INFO] - Test SRCC 0.6797 at (epoch: 2 / step: 280)
+[2025-03-22 03:52:50,887][test_model.py][INFO] - Test RMSE 2.8857 at (epoch: 2 / step: 280)
+[2025-03-22 03:52:50,888][test_model.py][INFO] - Test Loss 0.1467 at (epoch: 2 / step: 280)
+[2025-03-22 03:55:33,803][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_420.pt
+[2025-03-22 03:55:34,223][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_420.state
+[2025-03-22 03:56:13,672][test_model.py][INFO] - Test PLCC 0.7082 at (epoch: 3 / step: 420)
+[2025-03-22 03:56:13,672][test_model.py][INFO] - Test SRCC 0.6861 at (epoch: 3 / step: 420)
+[2025-03-22 03:56:13,672][test_model.py][INFO] - Test RMSE 2.9408 at (epoch: 3 / step: 420)
+[2025-03-22 03:56:13,672][test_model.py][INFO] - Test Loss 0.1461 at (epoch: 3 / step: 420)
+[2025-03-22 03:58:56,680][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_560.pt
+[2025-03-22 03:58:57,102][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_560.state
+[2025-03-22 03:59:36,943][test_model.py][INFO] - Test PLCC 0.7152 at (epoch: 4 / step: 560)
+[2025-03-22 03:59:36,943][test_model.py][INFO] - Test SRCC 0.6850 at (epoch: 4 / step: 560)
+[2025-03-22 03:59:36,944][test_model.py][INFO] - Test RMSE 2.9539 at (epoch: 4 / step: 560)
+[2025-03-22 03:59:36,944][test_model.py][INFO] - Test Loss 0.1409 at (epoch: 4 / step: 560)
+[2025-03-22 04:02:21,234][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_700.pt
+[2025-03-22 04:02:21,645][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_700.state
+[2025-03-22 04:03:01,572][test_model.py][INFO] - Test PLCC 0.7192 at (epoch: 5 / step: 700)
+[2025-03-22 04:03:01,572][test_model.py][INFO] - Test SRCC 0.6918 at (epoch: 5 / step: 700)
+[2025-03-22 04:03:01,573][test_model.py][INFO] - Test RMSE 2.9951 at (epoch: 5 / step: 700)
+[2025-03-22 04:03:01,573][test_model.py][INFO] - Test Loss 0.1405 at (epoch: 5 / step: 700)
+[2025-03-22 04:05:44,792][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_840.pt
+[2025-03-22 04:05:45,206][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_840.state
+[2025-03-22 04:06:24,923][test_model.py][INFO] - Test PLCC 0.7207 at (epoch: 6 / step: 840)
+[2025-03-22 04:06:24,923][test_model.py][INFO] - Test SRCC 0.6908 at (epoch: 6 / step: 840)
+[2025-03-22 04:06:24,923][test_model.py][INFO] - Test RMSE 2.9870 at (epoch: 6 / step: 840)
+[2025-03-22 04:06:24,923][test_model.py][INFO] - Test Loss 0.1424 at (epoch: 6 / step: 840)
+[2025-03-22 04:09:08,298][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_980.pt
+[2025-03-22 04:09:08,872][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_980.state
+[2025-03-22 04:09:49,354][test_model.py][INFO] - Test PLCC 0.7022 at (epoch: 7 / step: 980)
+[2025-03-22 04:09:49,355][test_model.py][INFO] - Test SRCC 0.6756 at (epoch: 7 / step: 980)
+[2025-03-22 04:09:49,355][test_model.py][INFO] - Test RMSE 2.9095 at (epoch: 7 / step: 980)
+[2025-03-22 04:09:49,355][test_model.py][INFO] - Test Loss 0.1436 at (epoch: 7 / step: 980)
+[2025-03-22 04:12:32,137][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1120.pt
+[2025-03-22 04:12:32,559][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1120.state
+[2025-03-22 04:13:13,222][test_model.py][INFO] - Test PLCC 0.7115 at (epoch: 8 / step: 1120)
+[2025-03-22 04:13:13,223][test_model.py][INFO] - Test SRCC 0.6669 at (epoch: 8 / step: 1120)
+[2025-03-22 04:13:13,223][test_model.py][INFO] - Test RMSE 3.0005 at (epoch: 8 / step: 1120)
+[2025-03-22 04:13:13,223][test_model.py][INFO] - Test Loss 0.1456 at (epoch: 8 / step: 1120)
+[2025-03-22 04:15:56,415][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1260.pt
+[2025-03-22 04:15:56,829][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1260.state
+[2025-03-22 04:16:37,009][test_model.py][INFO] - Test PLCC 0.7240 at (epoch: 9 / step: 1260)
+[2025-03-22 04:16:37,009][test_model.py][INFO] - Test SRCC 0.6895 at (epoch: 9 / step: 1260)
+[2025-03-22 04:16:37,009][test_model.py][INFO] - Test RMSE 2.9336 at (epoch: 9 / step: 1260)
+[2025-03-22 04:16:37,009][test_model.py][INFO] - Test Loss 0.1383 at (epoch: 9 / step: 1260)
+[2025-03-22 04:19:20,043][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1400.pt
+[2025-03-22 04:19:20,456][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1400.state
+[2025-03-22 04:20:00,067][test_model.py][INFO] - Test PLCC 0.7188 at (epoch: 10 / step: 1400)
+[2025-03-22 04:20:00,067][test_model.py][INFO] - Test SRCC 0.6873 at (epoch: 10 / step: 1400)
+[2025-03-22 04:20:00,067][test_model.py][INFO] - Test RMSE 2.9095 at (epoch: 10 / step: 1400)
+[2025-03-22 04:20:00,067][test_model.py][INFO] - Test Loss 0.1395 at (epoch: 10 / step: 1400)
+[2025-03-22 04:22:43,897][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1540.pt
+[2025-03-22 04:22:44,315][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1540.state
+[2025-03-22 04:23:24,078][test_model.py][INFO] - Test PLCC 0.7120 at (epoch: 11 / step: 1540)
+[2025-03-22 04:23:24,078][test_model.py][INFO] - Test SRCC 0.6872 at (epoch: 11 / step: 1540)
+[2025-03-22 04:23:24,078][test_model.py][INFO] - Test RMSE 2.9186 at (epoch: 11 / step: 1540)
+[2025-03-22 04:23:24,078][test_model.py][INFO] - Test Loss 0.1411 at (epoch: 11 / step: 1540)
+[2025-03-22 04:26:06,901][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1680.pt
+[2025-03-22 04:26:07,314][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1680.state
+[2025-03-22 04:26:46,907][test_model.py][INFO] - Test PLCC 0.7155 at (epoch: 12 / step: 1680)
+[2025-03-22 04:26:46,908][test_model.py][INFO] - Test SRCC 0.6769 at (epoch: 12 / step: 1680)
+[2025-03-22 04:26:46,908][test_model.py][INFO] - Test RMSE 2.9650 at (epoch: 12 / step: 1680)
+[2025-03-22 04:26:46,908][test_model.py][INFO] - Test Loss 0.1435 at (epoch: 12 / step: 1680)
+[2025-03-22 04:29:29,608][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1820.pt
+[2025-03-22 04:29:30,023][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1820.state
+[2025-03-22 04:30:09,545][test_model.py][INFO] - Test PLCC 0.7083 at (epoch: 13 / step: 1820)
+[2025-03-22 04:30:09,546][test_model.py][INFO] - Test SRCC 0.6727 at (epoch: 13 / step: 1820)
+[2025-03-22 04:30:09,546][test_model.py][INFO] - Test RMSE 2.9363 at (epoch: 13 / step: 1820)
+[2025-03-22 04:30:09,546][test_model.py][INFO] - Test Loss 0.1435 at (epoch: 13 / step: 1820)
+[2025-03-22 04:32:52,527][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1960.pt
+[2025-03-22 04:32:52,945][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_1960.state
+[2025-03-22 04:33:32,317][test_model.py][INFO] - Test PLCC 0.7076 at (epoch: 14 / step: 1960)
+[2025-03-22 04:33:32,317][test_model.py][INFO] - Test SRCC 0.6661 at (epoch: 14 / step: 1960)
+[2025-03-22 04:33:32,318][test_model.py][INFO] - Test RMSE 2.9640 at (epoch: 14 / step: 1960)
+[2025-03-22 04:33:32,318][test_model.py][INFO] - Test Loss 0.1460 at (epoch: 14 / step: 1960)
+[2025-03-22 04:36:15,269][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2100.pt
+[2025-03-22 04:36:15,682][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2100.state
+[2025-03-22 04:36:55,128][test_model.py][INFO] - Test PLCC 0.7053 at (epoch: 15 / step: 2100)
+[2025-03-22 04:36:55,129][test_model.py][INFO] - Test SRCC 0.6693 at (epoch: 15 / step: 2100)
+[2025-03-22 04:36:55,129][test_model.py][INFO] - Test RMSE 2.9196 at (epoch: 15 / step: 2100)
+[2025-03-22 04:36:55,129][test_model.py][INFO] - Test Loss 0.1440 at (epoch: 15 / step: 2100)
+[2025-03-22 04:39:38,643][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2240.pt
+[2025-03-22 04:39:39,064][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2240.state
+[2025-03-22 04:40:18,673][test_model.py][INFO] - Test PLCC 0.7038 at (epoch: 16 / step: 2240)
+[2025-03-22 04:40:18,674][test_model.py][INFO] - Test SRCC 0.6670 at (epoch: 16 / step: 2240)
+[2025-03-22 04:40:18,674][test_model.py][INFO] - Test RMSE 2.9490 at (epoch: 16 / step: 2240)
+[2025-03-22 04:40:18,674][test_model.py][INFO] - Test Loss 0.1467 at (epoch: 16 / step: 2240)
+[2025-03-22 04:43:02,534][model.py][INFO] - Saved network checkpoint to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2380.pt
+[2025-03-22 04:43:02,955][model.py][INFO] - Saved training state to: runs/loda_benchmark_evalmuse10k/loda_evalmuse10k_train_split0/chkpt_dir/loda_evalmuse10k_train_split0_2380.state
+[2025-03-22 04:43:42,592][test_model.py][INFO] - Test PLCC 0.7012 at (epoch: 17 / step: 2380)
+[2025-03-22 04:43:42,593][test_model.py][INFO] - Test SRCC 0.6663 at (epoch: 17 / step: 2380)
+[2025-03-22 04:43:42,593][test_model.py][INFO] - Test RMSE 2.9437 at (epoch: 17 / step: 2380)
+[2025-03-22 04:43:42,593][test_model.py][INFO] - Test Loss 0.1474 at (epoch: 17 / step: 2380)

@@ -1,0 +1,104 @@
+project_name: loda
+name: loda_evalmuse10k_train_split${split_index}
+run_group: loda_benchmark_evalmuse10k
+working_dir: runs/${run_group}/${name}
+random_seed: 3407
+train_test_num: 1
+num_epoch: 20
+split_index: 0
+train:
+  patch_num: 1
+  batch_size: 8
+  num_workers: 10
+test:
+  patch_num: 1
+  batch_size: 8
+  num_workers: 10
+dist:
+  device: cuda
+  mode: nccl
+  master_addr: 127.0.0.1
+  master_port: '23456'
+  timeout: null
+  gpus: 8
+  device_num: 8
+model:
+  model_name: loda
+  basic_model_name: vit_large_patch14_reg4_dinov2.lvd142m
+  basic_model_pretrained: true
+  hyper_vit:
+    dropout_rate: 0.1
+  vit_param:
+    img_size: 518
+    patch_size: 16
+    embed_dim: 768
+    depth: 12
+    qkv_bias: true
+    num_heads: 12
+    num_classes: 1000
+  learner_param:
+    num_classes: 1
+    embed_dim: ${model.vit_param.embed_dim}
+    feature_channels:
+    - 256
+    - 512
+    - 1024
+    - 2048
+    cnn_feature_num: 4
+    interaction_block_num: ${model.vit_param.depth}
+    latent_dim: 64
+    grid_size: 7
+    cross_attn_num_heads: 4
+  feature_model:
+    name: resnet50
+    load_timm_model: true
+    out_indices:
+    - 1
+    - 2
+    - 3
+    - 4
+data:
+  name: evalmuse10k
+  root: data/evalmuse10k
+  meta_info_file: data/meta_info/meta_info_EvalMuse10kDataset.csv
+  train_test_split_file: data/train_split_info/evalmuse10k_91_seed3407.pkl
+  divide_dataset_per_gpu: true
+  data_num: 10000
+  train_data_num: 9000
+  test_data_num: 1000
+  image_size: 518
+  patch_size: 518
+optimizer:
+  name: adamW
+  param:
+    lr: 0.0003
+    weight_decay: 0.01
+scheduler:
+  name: CosineAnnealingLR
+  param:
+    T_max: ${eval:'${data.train_data_num} * ${train.patch_num} * ${num_epoch} // (${train.batch_size}
+      * ${dist.device_num})'}
+    eta_min: 0
+loss:
+  fn:
+  - - plcc_loss
+    - 1
+log:
+  chkpt_dir: ${working_dir}/chkpt_dir
+  summary_interval: 1
+  net_chkpt_interval: 1
+  train_chkpt_interval: 1
+  use_wandb: true
+  wandb_save_model: false
+  wandb_init_conf:
+    project: ${project_name}
+    name: ${name}
+    entity: ${oc.env:WANDB_INIT_ENTITY}
+    mode: offline
+    save_code: true
+  use_tensorboard: false
+load:
+  resume_state_path: null
+  network_chkpt_path: null
+  wandb_load_path: null
+  strict_load: false
